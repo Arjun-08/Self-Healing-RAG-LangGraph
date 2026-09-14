@@ -1,0 +1,22 @@
+Acme Analytics Company Handbook
+
+About the company
+Acme Analytics is a fictional analytics company used for demonstration of the Self-Healing RAG system. The company was founded in 2018 and is headquartered in Bengaluru.
+
+Engineering practices
+Production services use automated unit tests, integration tests, and deployment checks. Critical services require two reviewers before production deployment. Engineers are expected to document major architectural decisions.
+
+Incident response
+For a production incident, the on-call engineer first acknowledges the alert, assesses severity, and creates an incident record. Severity-1 incidents require an incident commander. After mitigation, the team writes a post-incident review within five business days.
+
+Security
+Customer data must not be copied into personal storage. Access to production systems follows least-privilege principles. Secrets must be stored in the approved secrets manager rather than source code.
+
+Remote work
+Employees may work remotely up to three days per week with manager approval. Production incidents are an exception: on-call engineers may be required to respond outside normal working hours.
+
+Performance reviews
+Performance reviews occur twice per year. Engineers are evaluated on technical impact, reliability, collaboration, and mentorship.
+
+Learning budget
+Each employee has an annual learning budget of 500 USD for approved courses, books, and conferences.

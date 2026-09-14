@@ -1,0 +1,43 @@
+[
+  {
+    "question": "When was Acme Analytics founded?",
+    "answer": "Acme Analytics was founded in 2018.",
+    "keywords": [
+      "2018"
+    ]
+  },
+  {
+    "question": "How many days per week may employees work remotely?",
+    "answer": "Employees may work remotely up to three days per week with manager approval.",
+    "keywords": [
+      "three",
+      "3",
+      "days",
+      "week"
+    ]
+  },
+  {
+    "question": "What must happen before a critical service is deployed to production?",
+    "answer": "Critical services require two reviewers before production deployment.",
+    "keywords": [
+      "two",
+      "reviewers"
+    ]
+  },
+  {
+    "question": "How long does the team have to write a post-incident review?",
+    "answer": "The team must write a post-incident review within five business days after mitigation.",
+    "keywords": [
+      "five",
+      "business",
+      "days"
+    ]
+  },
+  {
+    "question": "Where should production secrets be stored?",
+    "answer": "Production secrets must be stored in the approved secrets manager rather than source code.",
+    "keywords": [
+      "secrets manager"
+    ]
+  }
+]
