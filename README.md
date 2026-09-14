@@ -134,7 +134,7 @@ This compares:
 - Standard RAG
 - Self-Healing RAG
 
-The included evaluation set is intentionally small and demonstrates the pipeline. For a serious portfolio benchmark, create 100–500 manually verified questions and record ground-truth relevant documents and expected answers.
+The included evaluation set is intentionally small and demonstrates the pipeline.
 
 Metrics currently exposed include:
 
@@ -146,41 +146,7 @@ Metrics currently exposed include:
 - Latency
 - Retry count
 
-Do not claim benchmark improvements until you run the evaluation and record the actual numbers.
-
-## Streamlit deployment
-
-Push the repository to GitHub.
-
-Then open Streamlit Community Cloud and create an app from:
-
-```text
-app.py
-```
-
-The repository should contain `requirements.txt` in the root.
-
-No API secret is needed because the demo uses local Hugging Face models.
-
 Important: the generation model is roughly 1 GB before runtime memory, so Community Cloud may be slower or may hit resource limits depending on the current environment. If that happens, use a hosted inference endpoint or deploy the same code on a machine with more RAM.
-
-## Recommended portfolio experiment
-
-The strongest result is not simply showing that the application works.
-
-Create a benchmark:
-
-```text
-                    Standard RAG    Self-Healing RAG
-Faithfulness            X%                Y%
-Answer accuracy         X%                Y%
-Citation accuracy       X%                Y%
-Retrieval recall        X%                Y%
-Avg latency             Xs                Ys
-Avg retries             0                 Z
-```
-
-Then analyze failure cases where the initial answer was rejected and the retry recovered the correct evidence.
 
 ## Future work
 
