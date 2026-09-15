@@ -1,3 +1,19 @@
+## Work in Progress
+
+<p align="center">
+  <img src="https://media.giphy.com/media/3o7TKtnuHOHHUjR38Y/giphy.gif" width="350">
+</p>
+
+<p align="center">
+  <b>🚧 Work in Progress 🚧</b>
+</p>
+
+<p align="center">
+  Building, breaking, debugging, rebuilding...<br>
+  Repeat until it works.
+</p>
+
+
 # Self-Healing RAG with LangGraph
 
 A reliability-focused Retrieval-Augmented Generation system that does more than retrieve and generate. It evaluates its own answer at the claim level, checks evidence citations, reformulates the retrieval query when evidence is weak, retries within a bounded LangGraph cycle, and stops safely when sufficient evidence cannot be found.
