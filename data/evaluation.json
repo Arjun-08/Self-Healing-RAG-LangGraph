@@ -2,42 +2,51 @@
   {
     "question": "When was Acme Analytics founded?",
     "answer": "Acme Analytics was founded in 2018.",
-    "keywords": [
-      "2018"
-    ]
+    "keywords": ["2018"]
   },
   {
     "question": "How many days per week may employees work remotely?",
     "answer": "Employees may work remotely up to three days per week with manager approval.",
-    "keywords": [
-      "three",
-      "3",
-      "days",
-      "week"
-    ]
+    "keywords": ["three", "3", "days", "week"]
   },
   {
     "question": "What must happen before a critical service is deployed to production?",
     "answer": "Critical services require two reviewers before production deployment.",
-    "keywords": [
-      "two",
-      "reviewers"
-    ]
+    "keywords": ["two", "reviewers"]
   },
   {
     "question": "How long does the team have to write a post-incident review?",
     "answer": "The team must write a post-incident review within five business days after mitigation.",
-    "keywords": [
-      "five",
-      "business",
-      "days"
-    ]
+    "keywords": ["five", "business", "days"]
   },
   {
     "question": "Where should production secrets be stored?",
     "answer": "Production secrets must be stored in the approved secrets manager rather than source code.",
-    "keywords": [
-      "secrets manager"
-    ]
+    "keywords": ["secrets manager"]
+  },
+  {
+    "question": "What is the company's maximum annual learning budget per employee?",
+    "answer": "The annual learning budget is up to 1500 dollars per employee.",
+    "keywords": ["1500", "learning budget"]
+  },
+  {
+    "question": "What should an employee do if a production credential is accidentally exposed?",
+    "answer": "The employee must immediately report the exposure to security and rotate the credential.",
+    "keywords": ["security", "rotate", "credential"]
+  },
+  {
+    "question": "How long are standard audit logs retained?",
+    "answer": "Standard audit logs are retained for 180 days.",
+    "keywords": ["180", "days"]
+  },
+  {
+    "question": "Can an employee deploy a critical service without a second reviewer?",
+    "answer": "No. Critical services require two reviewers before production deployment.",
+    "keywords": ["two", "reviewers"]
+  },
+  {
+    "question": "What is the policy for customer data in development environments?",
+    "answer": "Production customer data must not be copied into development environments; sanitized or synthetic data should be used instead.",
+    "keywords": ["production", "customer data", "development", "sanitized"]
   }
 ]
