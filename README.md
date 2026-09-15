@@ -192,41 +192,6 @@ recovered standard-RAG failures
 all standard-RAG failures
 ```
 
-Do not claim a recovery percentage until the benchmark has been run on a sufficiently large, manually verified evaluation set.
-
-## Recommended portfolio benchmark
-
-Create at least 100–300 manually verified questions covering:
-
-- Direct factual questions
-- Paraphrased questions
-- Exact-term questions
-- Numerical questions
-- Multi-sentence evidence
-- Ambiguous questions
-- Unanswerable questions
-- Questions designed to expose distractor retrieval
-
-For each question, annotate:
-
-```text
-question
-expected_answer
-relevant_chunk_ids
-answerable
-```
-
-Then report:
-
-| Metric | Standard RAG | Self-Healing RAG |
-|---|---:|---:|
-| Recall@K | X | X |
-| Faithfulness | X | X |
-| Citation support | X | X |
-| Answer accuracy | X | X |
-| Avg latency | X s | X s |
-| Avg retries | 0 | X |
-| Recovery rate | — | X% |
 
 ## Important interpretation
 
