@@ -1,0 +1,34 @@
+ACME ANALYTICS — COMPANY HANDBOOK
+
+COMPANY
+Acme Analytics was founded in 2018. The company builds analytics software for enterprise customers and operates engineering, security, product, and customer-success teams.
+
+REMOTE WORK
+Employees may work remotely up to three days per week with manager approval. Teams may establish additional collaboration days when project requirements justify them.
+
+PRODUCTION DEPLOYMENTS
+Critical services require two reviewers before production deployment. The deployment owner must verify that required tests pass and that the deployment record is complete.
+
+INCIDENT RESPONSE
+Critical incidents must be acknowledged promptly by the on-call engineer. After mitigation, the incident owner must write a post-incident review within five business days. The review should document impact, timeline, root cause, contributing factors, and corrective actions.
+
+SECRETS MANAGEMENT
+Production secrets must be stored in the approved secrets manager rather than source code, tickets, or chat messages. Credentials should be rotated when exposure is suspected.
+
+LEARNING AND DEVELOPMENT
+Employees may receive an annual learning budget of up to 1500 dollars for approved courses, conferences, books, and technical training.
+
+SECURITY INCIDENTS
+If a production credential is accidentally exposed, the employee must immediately report the exposure to the security team and rotate the credential. Security may require additional credential rotation or access review.
+
+AUDIT LOGGING
+Standard audit logs are retained for 180 days. Certain regulated workloads may have longer retention requirements defined by their service owner.
+
+CUSTOMER DATA
+Production customer data must not be copied into development environments. Engineers should use sanitized or synthetic data for development and testing. Exceptions require explicit security approval.
+
+MEETING GUIDELINES
+Teams are encouraged to keep recurring meetings focused and to document decisions in the appropriate project workspace. Meeting guidelines do not override security or production-change requirements.
+
+EXPENSES
+Routine business expenses require receipts according to the finance policy. Travel approvals are handled through the normal company workflow.

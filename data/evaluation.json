@@ -1,0 +1,268 @@
+[
+  {
+    "id": 1,
+    "category": "direct_factual",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "When was Acme Analytics founded?",
+    "answer": "Acme Analytics was founded in 2018.",
+    "keywords": [
+      "2018"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 2,
+    "category": "paraphrase",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "How many remote-work days can an employee have each week if the manager approves?",
+    "answer": "Employees may work remotely up to three days per week with manager approval.",
+    "keywords": [
+      "three",
+      "days",
+      "week",
+      "manager"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 3,
+    "category": "policy",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "What approval is required before deploying a critical service to production?",
+    "answer": "Critical services require two reviewers before production deployment.",
+    "keywords": [
+      "two",
+      "reviewers",
+      "production"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 4,
+    "category": "numerical",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "What is the deadline for writing the post-incident review after mitigation?",
+    "answer": "The incident owner must write a post-incident review within five business days after mitigation.",
+    "keywords": [
+      "five",
+      "business",
+      "days",
+      "mitigation"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 5,
+    "category": "security",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "Where should production secrets be stored instead of source code?",
+    "answer": "Production secrets must be stored in the approved secrets manager rather than source code, tickets, or chat messages.",
+    "keywords": [
+      "approved",
+      "secrets",
+      "manager",
+      "source",
+      "code"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 6,
+    "category": "numerical",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "What is the maximum annual learning budget per employee?",
+    "answer": "Employees may receive an annual learning budget of up to 1500 dollars.",
+    "keywords": [
+      "1500",
+      "learning",
+      "budget"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c1"
+    ]
+  },
+  {
+    "id": 7,
+    "category": "security",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "What two actions are required after accidentally exposing a production credential?",
+    "answer": "The employee must immediately report the exposure to the security team and rotate the credential.",
+    "keywords": [
+      "report",
+      "security",
+      "rotate",
+      "credential"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0",
+      "sample_company_handbook.txt-c1"
+    ]
+  },
+  {
+    "id": 8,
+    "category": "numerical",
+    "difficulty": "easy",
+    "answerable": true,
+    "question": "How many days are standard audit logs retained?",
+    "answer": "Standard audit logs are retained for 180 days.",
+    "keywords": [
+      "180",
+      "days",
+      "audit",
+      "logs"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c1"
+    ]
+  },
+  {
+    "id": 9,
+    "category": "negative",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "Is a second reviewer optional for a critical production deployment?",
+    "answer": "No. Critical services require two reviewers before production deployment.",
+    "keywords": [
+      "no",
+      "two",
+      "reviewers"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 10,
+    "category": "security",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "Can production customer data be copied into a development environment?",
+    "answer": "No. Production customer data must not be copied into development environments; sanitized or synthetic data should be used instead.",
+    "keywords": [
+      "production",
+      "customer",
+      "data",
+      "development",
+      "sanitized"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c1"
+    ]
+  },
+  {
+    "id": 11,
+    "category": "paraphrase",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "What information belongs in the post-incident review?",
+    "answer": "The review should document impact, timeline, root cause, contributing factors, and corrective actions.",
+    "keywords": [
+      "impact",
+      "timeline",
+      "root",
+      "cause",
+      "corrective",
+      "actions"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 12,
+    "category": "policy",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "What must the deployment owner verify in addition to having two reviewers?",
+    "answer": "The deployment owner must verify that required tests pass and that the deployment record is complete.",
+    "keywords": [
+      "tests",
+      "pass",
+      "deployment",
+      "record",
+      "complete"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 13,
+    "category": "negative",
+    "difficulty": "medium",
+    "answerable": true,
+    "question": "Can production secrets be stored in chat messages?",
+    "answer": "No. Production secrets must be stored in the approved secrets manager rather than source code, tickets, or chat messages.",
+    "keywords": [
+      "no",
+      "secrets",
+      "manager",
+      "chat"
+    ],
+    "relevant_chunk_ids": [
+      "sample_company_handbook.txt-c0"
+    ]
+  },
+  {
+    "id": 14,
+    "category": "unanswerable",
+    "difficulty": "hard",
+    "answerable": false,
+    "question": "What is the company's parental leave policy?",
+    "answer": "I don't have enough information in the provided documents.",
+    "keywords": [
+      "enough",
+      "information",
+      "provided",
+      "documents"
+    ],
+    "relevant_chunk_ids": []
+  },
+  {
+    "id": 15,
+    "category": "unanswerable",
+    "difficulty": "hard",
+    "answerable": false,
+    "question": "What programming language is used by the analytics backend?",
+    "answer": "I don't have enough information in the provided documents.",
+    "keywords": [
+      "enough",
+      "information",
+      "provided",
+      "documents"
+    ],
+    "relevant_chunk_ids": []
+  },
+  {
+    "id": 16,
+    "category": "unanswerable",
+    "difficulty": "hard",
+    "answerable": false,
+    "question": "Which cloud provider hosts Acme Analytics production systems?",
+    "answer": "I don't have enough information in the provided documents.",
+    "keywords": [
+      "enough",
+      "information",
+      "provided",
+      "documents"
+    ],
+    "relevant_chunk_ids": []
+  }
+]

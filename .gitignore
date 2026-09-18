@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+*.log
+.DS_Store
+evaluation_results.csv
+metrics_summary.csv
+category_metrics.csv
+healing_analysis.csv
+healing_summary.csv
