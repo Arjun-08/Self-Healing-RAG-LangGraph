@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 import time
@@ -19,7 +18,17 @@ logger = logging.getLogger("self_healing_rag")
 
 EMBED_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 GEN_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
-MAX_CONTEXT_CHARS = 7000
+RRF_K = 60
+DEFAULT_TOP_K = 5
+MAX_CONTEXT_CHARS = 6500
+
+STOPWORDS = {
+    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+    "to", "of", "and", "in", "on", "for", "with", "from", "by", "or", "as",
+    "what", "when", "where", "who", "which", "how", "does", "do", "did",
+    "can", "may", "must", "should", "their", "they", "them", "this", "that",
+    "company", "employee", "employees", "policy", "according", "following",
+}
 
 
 @dataclass
@@ -48,8 +57,10 @@ class CriticResult:
     grounded_score: float
     relevance_score: float
     confidence: float
+    supported_claim_rate: float
     reason: str
     action: str
+    failure_type: str | None
 
 
 class GraphState(TypedDict, total=False):
@@ -60,6 +71,7 @@ class GraphState(TypedDict, total=False):
     attempt: int
     max_retries: int
     critic: Dict[str, Any]
+    previous_quality: float
     mode: str
     trace: List[Dict[str, Any]]
 
@@ -72,8 +84,11 @@ def tokenize(text: str) -> List[str]:
     return re.findall(r"\b[a-zA-Z0-9][a-zA-Z0-9_-]*\b", text.lower())
 
 
+def content_tokens(text: str) -> set[str]:
+    return {t for t in tokenize(text) if t not in STOPWORDS and len(t) > 1}
+
+
 def split_text(text: str, chunk_size: int = 180, overlap: int = 35) -> List[str]:
-    """Word-based chunking. Small chunks improve citation-level attribution."""
     text = normalize_text(text)
     if not text:
         return []
@@ -124,8 +139,6 @@ def load_document_bytes(name: str, data: bytes) -> List[Chunk]:
 
 
 class HybridRetriever:
-    """Dense + BM25 retrieval followed by Reciprocal Rank Fusion."""
-
     def __init__(self, chunks: List[Chunk], embedding_model: SentenceTransformer):
         if not chunks:
             raise ValueError("No document chunks available.")
@@ -142,22 +155,22 @@ class HybridRetriever:
         ).astype("float32")
         logger.info("Built retriever over %d chunks", len(chunks))
 
-    def search(self, query: str, top_k: int = 5, dense_k: int = 12, bm25_k: int = 12) -> List[RetrievedChunk]:
+    def search(self, query: str, top_k: int = DEFAULT_TOP_K, dense_k: int = 15, bm25_k: int = 15) -> List[RetrievedChunk]:
         qvec = self.embedder.encode([query], normalize_embeddings=True, show_progress_bar=False)[0].astype("float32")
         dense_scores = self.embeddings @ qvec
         dense_order = np.argsort(-dense_scores)[: min(dense_k, len(self.chunks))]
 
-        bm25_scores = np.asarray(self.bm25.get_scores(tokenize(query)))
+        bm25_scores = np.asarray(self.bm25.get_scores(tokenize(query)), dtype="float32")
         bm25_order = np.argsort(-bm25_scores)[: min(bm25_k, len(self.chunks))]
 
         rrf: Dict[int, float] = {}
         for rank, idx in enumerate(dense_order, start=1):
-            rrf[int(idx)] = rrf.get(int(idx), 0.0) + 1.0 / (60 + rank)
+            rrf[int(idx)] = rrf.get(int(idx), 0.0) + 1.0 / (RRF_K + rank)
         for rank, idx in enumerate(bm25_order, start=1):
-            rrf[int(idx)] = rrf.get(int(idx), 0.0) + 1.0 / (60 + rank)
+            rrf[int(idx)] = rrf.get(int(idx), 0.0) + 1.0 / (RRF_K + rank)
 
-        ordered = sorted(rrf, key=rrf.get, reverse=True)[:top_k]
-        results = [
+        ordered = sorted(rrf, key=rrf.get, reverse=True)[: min(top_k, len(self.chunks))]
+        return [
             RetrievedChunk(
                 chunk=self.chunks[i],
                 dense_score=float(dense_scores[i]),
@@ -166,13 +179,9 @@ class HybridRetriever:
             )
             for i in ordered
         ]
-        logger.info("Retrieved query=%r top_k=%d", query, top_k)
-        return results
 
 
 class LocalLLM:
-    """Small fully local instruction model. No API key is required."""
-
     def __init__(self, model_name: str = GEN_MODEL):
         logger.info("Loading generation model: %s", model_name)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -203,7 +212,7 @@ class LocalLLM:
 
 
 def format_contexts(contexts: List[RetrievedChunk]) -> str:
-    blocks = []
+    blocks: List[str] = []
     total = 0
     for i, item in enumerate(contexts, start=1):
         block = f"[{i}] {item.chunk.text}"
@@ -215,15 +224,14 @@ def format_contexts(contexts: List[RetrievedChunk]) -> str:
 
 
 def answer_prompt(question: str, contexts: List[RetrievedChunk]) -> str:
-    return f"""Answer the question using ONLY the evidence.
+    return f"""Answer the question using ONLY the evidence below.
 
-Strict rules:
+Rules:
 - Do not use outside knowledge.
-- If the evidence does not contain enough information, say: I don't have enough information in the provided documents.
-- Give a concise answer, usually 1-3 sentences.
-- Every factual sentence MUST end with one or more citations such as [1] or [2].
-- Citation numbers MUST refer only to the evidence blocks below.
-- Never invent a citation number.
+- If the evidence is insufficient, say exactly: I don't have enough information in the provided documents.
+- Give a concise answer in 1-3 sentences.
+- Do NOT write citation markers. A separate deterministic citation step will add them.
+- Do not invent facts, numbers, dates, names, or policies.
 
 Question:
 {question}
@@ -235,19 +243,21 @@ Answer:"""
 
 
 def rewrite_prompt(question: str, previous_answer: str, critic_reason: str, old_query: str) -> str:
-    return f"""Create a better retrieval query. Return ONLY the query, no explanation.
+    return f"""Rewrite the retrieval query to find evidence that addresses the specific problem below.
+Return ONLY one search query and nothing else.
 
 Original question: {question}
-Previous search query: {old_query}
+Previous query: {old_query}
 Previous answer: {previous_answer}
-Critic feedback: {critic_reason}
+Failure: {critic_reason}
 
-Use important entities, exact terms, numbers, and concepts from the question. Try a different wording that can retrieve missing evidence.
-"""
+Preserve important entities, numbers, policy terms, and constraints. Use alternative wording when useful."""
 
 
 def sentence_parts(answer: str) -> List[str]:
     answer = re.sub(r"\s+", " ", answer).strip()
+    if not answer:
+        return []
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", answer) if s.strip()]
 
 
@@ -256,13 +266,10 @@ def strip_citations(text: str) -> str:
 
 
 def lexical_support(sentence: str, context: str) -> float:
-    s = set(tokenize(strip_citations(sentence)))
-    c = set(tokenize(context))
+    s = content_tokens(strip_citations(sentence))
+    c = content_tokens(context)
     if not s:
         return 0.0
-    # Ignore common function words so factual overlap matters more.
-    stop = {"the", "a", "an", "is", "are", "was", "were", "to", "of", "and", "in", "on", "for", "with", "what", "how", "when", "where", "does", "do", "did"}
-    s -= stop
     return len(s & c) / max(1, len(s))
 
 
@@ -272,61 +279,136 @@ def support_matrix(answer_sentences: List[str], contexts: List[RetrievedChunk], 
     sentences = [strip_citations(s) for s in answer_sentences]
     ctx = [r.chunk.text for r in contexts]
     vecs = embedder.encode(sentences + ctx, normalize_embeddings=True, show_progress_bar=False)
-    a = vecs[:len(sentences)]
+    a = vecs[: len(sentences)]
     c = vecs[len(sentences):]
     semantic = a @ c.T
     lexical = np.array([[lexical_support(s, x) for x in ctx] for s in sentences])
+    # Semantic similarity handles paraphrases; lexical overlap rewards exact factual evidence.
     return 0.65 * semantic + 0.35 * lexical
 
 
-def deterministic_critic(question: str, answer: str, contexts: List[RetrievedChunk], embedder: SentenceTransformer) -> CriticResult:
+def attach_citations(answer: str, contexts: List[RetrievedChunk], embedder: SentenceTransformer, support_threshold: float = 0.43) -> tuple[str, List[Dict[str, Any]]]:
+    """Attach citations deterministically to each answer sentence.
+
+    This removes dependence on the small local LLM following citation syntax perfectly.
+    """
+    sentences = sentence_parts(answer)
+    if not sentences or not contexts:
+        return answer.strip(), []
+
+    matrix = support_matrix(sentences, contexts, embedder)
+    output: List[str] = []
+    mapping: List[Dict[str, Any]] = []
+
+    for i, sentence in enumerate(sentences):
+        scores = matrix[i]
+        order = np.argsort(-scores)
+        best_idx = int(order[0])
+        best_score = float(scores[best_idx])
+        citations: List[int] = []
+        if best_score >= support_threshold:
+            citations.append(best_idx + 1)
+            # Add a second source only when it independently clears the threshold and is useful.
+            if len(order) > 1 and float(scores[int(order[1])]) >= support_threshold + 0.05:
+                citations.append(int(order[1]) + 1)
+
+        clean = strip_citations(sentence)
+        suffix = " " + " ".join(f"[{c}]" for c in citations) if citations else ""
+        output.append(clean + suffix)
+        mapping.append({
+            "sentence": clean,
+            "citations": citations,
+            "best_chunk": best_idx + 1,
+            "best_score": round(best_score, 4),
+        })
+
+    return " ".join(output), mapping
+
+
+def citation_metrics(answer: str, contexts: List[RetrievedChunk], embedder: SentenceTransformer, support_threshold: float = 0.43) -> tuple[bool, bool, float, List[Dict[str, Any]]]:
+    sentences = sentence_parts(answer)
+    if not sentences or not contexts:
+        return False, False, 0.0, []
+    matrix = support_matrix(sentences, contexts, embedder)
+    mapping: List[Dict[str, Any]] = []
+    valid_flags: List[bool] = []
+    supported_flags: List[bool] = []
+
+    for i, sentence in enumerate(sentences):
+        cited = [int(x) for x in re.findall(r"\[(\d+)\]", sentence)]
+        valid = bool(cited) and all(1 <= x <= len(contexts) for x in cited)
+        supported = valid and all(matrix[i, x - 1] >= support_threshold for x in cited)
+        valid_flags.append(valid)
+        supported_flags.append(supported)
+        mapping.append({
+            "sentence": strip_citations(sentence),
+            "citations": cited,
+            "valid": valid,
+            "supported": supported,
+            "best_score": round(float(matrix[i].max()), 4),
+        })
+
+    valid_rate = float(np.mean(valid_flags)) if valid_flags else 0.0
+    supported_rate = float(np.mean(supported_flags)) if supported_flags else 0.0
+    return bool(all(valid_flags)), bool(all(supported_flags)), supported_rate, mapping
+
+
+def critic_for_answer(question: str, answer: str, contexts: List[RetrievedChunk], embedder: SentenceTransformer) -> CriticResult:
     if not answer.strip() or "I don't have enough information" in answer:
-        return CriticResult(False, False, False, False, False, 0.0, 0.0, 0.0, "The model did not produce a supported answer.", "RETRIEVE_MORE")
+        return CriticResult(False, False, False, False, False, 0.0, 0.0, 0.0, 0.0, "No sufficiently informative answer was produced.", "RETRIEVE_MORE", "INSUFFICIENT_ANSWER")
 
     sentences = sentence_parts(answer)
     matrix = support_matrix(sentences, contexts, embedder)
     per_sentence = matrix.max(axis=1) if matrix.size else np.zeros(len(sentences))
     grounded_score = float(np.mean(per_sentence)) if len(per_sentence) else 0.0
-    grounded = bool(np.all(per_sentence >= 0.43))
+
+    # A claim is considered supported when at least one retrieved chunk provides enough evidence.
+    grounded = bool(len(per_sentence) > 0 and np.mean(per_sentence >= 0.43) >= 0.80)
 
     qvec = embedder.encode([question], normalize_embeddings=True, show_progress_bar=False)[0]
     avec = embedder.encode([strip_citations(answer)], normalize_embeddings=True, show_progress_bar=False)[0]
     relevance_score = float(qvec @ avec)
     relevant = relevance_score >= 0.38
 
-    citations = [int(x) for x in re.findall(r"\[(\d+)\]", answer)]
-    citation_valid = bool(citations) and all(1 <= x <= len(contexts) for x in citations)
-
-    # A citation is semantically supported when the cited chunk supports the sentence it appears in.
-    citation_supported_flags: List[bool] = []
-    for i, sentence in enumerate(sentences):
-        cited = [int(x) for x in re.findall(r"\[(\d+)\]", sentence)]
-        if not cited:
-            citation_supported_flags.append(False)
-            continue
-        ok = all(1 <= x <= len(contexts) and matrix[i, x - 1] >= 0.43 for x in cited)
-        citation_supported_flags.append(ok)
-    citation_supported = bool(citation_supported_flags) and all(citation_supported_flags)
-
+    citation_valid, citation_supported, supported_claim_rate, _ = citation_metrics(answer, contexts, embedder)
     complete = len(strip_citations(answer).split()) >= 4
+
     confidence = float(np.clip(
-        0.45 * grounded_score + 0.30 * max(0.0, relevance_score) + 0.15 * (1.0 if citation_supported else 0.0) + 0.10 * (1.0 if complete else 0.0),
-        0, 1,
+        0.45 * grounded_score
+        + 0.30 * max(0.0, relevance_score)
+        + 0.15 * supported_claim_rate
+        + 0.10 * (1.0 if complete else 0.0),
+        0.0,
+        1.0,
     ))
 
+    # Citation formatting is not a reason to regenerate because citations are deterministic.
     if not grounded:
-        action, reason = "RETRIEVE_MORE", "At least one answer claim is weakly supported by the retrieved evidence."
+        action, reason, failure = "RETRIEVE_MORE", "At least one answer claim is weakly supported by the retrieved evidence.", "UNSUPPORTED_CLAIM"
     elif not relevant:
-        action, reason = "RETRIEVE_MORE", "The answer is weakly aligned with the user's question."
-    elif not citation_valid or not citation_supported:
-        action, reason = "REGENERATE", "Citations are missing, invalid, or not supported by the cited evidence."
+        action, reason, failure = "RETRIEVE_MORE", "The answer is weakly aligned with the question.", "LOW_RELEVANCE"
+    elif supported_claim_rate < 0.80:
+        action, reason, failure = "RETRIEVE_MORE", "Too many answer claims lack sufficient evidence in the current context.", "WEAK_EVIDENCE"
     else:
-        action, reason = "PASS", "Answer is grounded, relevant, complete enough, and supported by citations."
+        action, reason, failure = "PASS", "Answer is sufficiently grounded and relevant.", None
 
-    return CriticResult(grounded, relevant, complete, citation_valid, citation_supported, grounded_score, relevance_score, confidence, reason, action)
+    return CriticResult(
+        grounded,
+        relevant,
+        complete,
+        citation_valid,
+        citation_supported,
+        grounded_score,
+        relevance_score,
+        confidence,
+        supported_claim_rate,
+        reason,
+        action,
+        failure,
+    )
 
 
-def build_graph(retriever: HybridRetriever, llm: LocalLLM, embedder: SentenceTransformer, top_k: int = 5):
+def build_graph(retriever: HybridRetriever, llm: LocalLLM, embedder: SentenceTransformer, top_k: int = DEFAULT_TOP_K):
     def add_trace(state: GraphState, node: str, message: str, **extra):
         trace = list(state.get("trace", []))
         trace.append({"time": time.strftime("%H:%M:%S"), "node": node, "message": message, **extra})
@@ -335,40 +417,79 @@ def build_graph(retriever: HybridRetriever, llm: LocalLLM, embedder: SentenceTra
     def retrieve_node(state: GraphState):
         q = state.get("search_query") or state["question"]
         results = retriever.search(q, top_k=top_k)
-        return {"contexts": results, "trace": add_trace(state, "RETRIEVER", f"Retrieved {len(results)} chunks using dense + BM25 + RRF.", query=q)}
+        return {
+            "contexts": results,
+            "trace": add_trace(state, "RETRIEVER", f"Retrieved {len(results)} chunks using dense + BM25 + RRF.", query=q),
+        }
 
     def generate_node(state: GraphState):
         started = time.perf_counter()
-        answer = llm.generate("You are a precise evidence-grounded assistant. Follow the citation rules exactly.", answer_prompt(state["question"], state["contexts"]))
+        raw = llm.generate(
+            "You are a precise evidence-grounded assistant. Use only the supplied evidence. Never invent facts.",
+            answer_prompt(state["question"], state["contexts"]),
+        )
+        # Remove accidental citations before deterministic citation attachment.
+        raw = strip_citations(raw)
+        cited_answer, mapping = attach_citations(raw, state["contexts"], embedder)
         latency = (time.perf_counter() - started) * 1000
-        return {"answer": answer, "trace": add_trace(state, "GENERATOR", "Generated a candidate answer with evidence citations.", latency_ms=round(latency, 1))}
+        return {
+            "answer": cited_answer,
+            "trace": add_trace(
+                state,
+                "GENERATOR",
+                "Generated answer and attached evidence citations deterministically.",
+                latency_ms=round(latency, 1),
+                citation_mapping=mapping,
+            ),
+        }
 
     def critic_node(state: GraphState):
         started = time.perf_counter()
-        result = deterministic_critic(state["question"], state["answer"], state["contexts"], embedder)
+        result = critic_for_answer(state["question"], state["answer"], state["contexts"], embedder)
         latency = (time.perf_counter() - started) * 1000
-        return {"critic": result.__dict__, "trace": add_trace(state, "CRITIC", result.reason, action=result.action, confidence=round(result.confidence, 3), grounded_score=round(result.grounded_score, 3), relevance_score=round(result.relevance_score, 3), citation_supported=result.citation_supported, latency_ms=round(latency, 1))}
+        return {
+            "critic": result.__dict__,
+            "trace": add_trace(
+                state,
+                "CRITIC",
+                result.reason,
+                action=result.action,
+                failure_type=result.failure_type,
+                confidence=round(result.confidence, 3),
+                grounded_score=round(result.grounded_score, 3),
+                relevance_score=round(result.relevance_score, 3),
+                supported_claim_rate=round(result.supported_claim_rate, 3),
+                latency_ms=round(latency, 1),
+            ),
+        }
 
     def rewrite_node(state: GraphState):
         started = time.perf_counter()
         old_query = state.get("search_query") or state["question"]
         rewritten = llm.generate(
-            "You are a retrieval query rewriting component. Output only one search query.",
+            "You rewrite retrieval queries. Output only one concise search query.",
             rewrite_prompt(state["question"], state.get("answer", ""), state["critic"]["reason"], old_query),
             max_new_tokens=60,
         )
         rewritten = normalize_text(rewritten).strip('"').strip()
         if not rewritten or rewritten.lower() == old_query.lower():
-            # Deterministic fallback prevents a useless retry.
-            rewritten = f"{state['question']} evidence policy requirements details"
+            # Deterministic fallback: emphasize the failure type and evidence requirement.
+            failure = state["critic"].get("failure_type", "evidence")
+            rewritten = f"{state['question']} {failure.replace('_', ' ').lower()} evidence requirements details"
         return {
             "search_query": rewritten,
             "attempt": state.get("attempt", 0) + 1,
-            "trace": add_trace(state, "QUERY_REWRITER", f"Reformulated query: {rewritten}", latency_ms=round((time.perf_counter() - started) * 1000, 1)),
+            "trace": add_trace(
+                state,
+                "QUERY_REWRITER",
+                f"Reformulated query: {rewritten}",
+                latency_ms=round((time.perf_counter() - started) * 1000, 1),
+            ),
         }
 
     def route(state: GraphState):
-        if state.get("critic", {}).get("action") == "PASS":
+        critic = state.get("critic", {})
+        if critic.get("action") == "PASS":
             return "final"
         if state.get("attempt", 0) < state.get("max_retries", 2):
             return "retry"
