@@ -570,8 +570,8 @@ The Self-Healing RAG architecture adds verification and bounded recovery stages 
 
 ## Future Development
 
-Future development will focus on making the **Self-Healing RAG pipeline more intelligent, evidence-aware, and efficient**. The main objective is to improve the critic so that it can identify the specific reason an answer requires correction and select an appropriate recovery action.
+Future development will focus on making the Self-Healing RAG pipeline more intelligent, reliable, and efficient. The critic can be improved to identify why an answer is incorrect and choose the right recovery method.
 
-The query-rewriting stage can be enhanced to generate targeted reformulations based on detected failures. Combined with stronger claim-level evidence verification, this can enable the system to retrieve more appropriate supporting context and validate the regenerated response before accepting it.
+Query rewriting can be made more targeted based on the detected error. Better claim-level verification can help retrieve relevant evidence and check the regenerated answer before accepting it.
 
-A quality gate can further strengthen the architecture by comparing the original and healed responses and preserving the higher-quality answer. Deterministic citation assignment and explicit abstention can improve reliability by ensuring that generated claims remain traceable to supporting evidence.
+A quality gate can compare the original and healed answers and keep the better one. Deterministic citations and an abstention mechanism can further improve reliability by ensuring that claims are supported by evidence.
