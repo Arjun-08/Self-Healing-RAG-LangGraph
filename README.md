@@ -575,3 +575,5 @@ Future development will focus on making the Self-Healing RAG pipeline more intel
 Query rewriting can be made more targeted based on the detected error. Better claim-level verification can help retrieve relevant evidence and check the regenerated answer before accepting it.
 
 A quality gate can compare the original and healed answers and keep the better one. Deterministic citations and an abstention mechanism can further improve reliability by ensuring that claims are supported by evidence.
+
+> **Note:** The `app.py` file corresponds to an earlier version of the project that includes the Streamlit interface. The latest Self-Healing RAG implementation has not yet been integrated into `app.py`, as further development is still ongoing.
